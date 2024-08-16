@@ -102,8 +102,8 @@ class _ContactPageState extends State<ContactPage> {
                      icon: const Icon(Icons.phone),
                    ),
                   onTap: () {
-                    contactsProvider.addContact(filteredContacts![index]);
-                    Navigator.pop(context);  // Navigate back to home page
+                    //contactsProvider.addContact(filteredContacts![index]);
+                    Navigator.pop(context,filteredContacts![index]);  // Navigate back to home page
                   },
                 );
               },
@@ -230,5 +230,6 @@ class _ContactPageState extends State<ContactPage> {
 //     );
 //   }
 // }
+
 
 

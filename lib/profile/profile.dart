@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 
 
 import '../login/auth_service.dart';
+import '../login/login.dart';
 import '../provider/theme_provider.dart';
 
 class Profile extends StatefulWidget {
@@ -178,7 +179,17 @@ class _ProfileState extends State<Profile> {
             child: Text('No'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            // onPressed: () => Navigator.pop(context, true),
+            
+            onPressed: () {
+              Navigator.pop(context, true);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => LoginScreen()),
+              );
+
+            },
+            
             child: Text('Yes'),
           ),
         ],

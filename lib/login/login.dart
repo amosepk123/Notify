@@ -1,17 +1,15 @@
-import 'dart:developer';
-import 'package:call/BottomNavigation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
 
+import '../BottomNavigation.dart';
 import '../provider/Name provider.dart';
 import 'Phone_Number.dart';
 import 'auth_service.dart';
-
 import 'signup.dart';
-
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -21,15 +19,65 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _auth = AuthService();
-  final _email = TextEditingController();
+  final _name = TextEditingController();
   final _password = TextEditingController();
   final phoneController = TextEditingController();
 
-  bool isLoading = false;
+  bool _isLoading = false;
+  bool _hasError = false;
+  bool _success = false;
+  String _errorMessage = "";
+  bool _obscurePassword = true;
+
+  Future<void> LoginUser() async {
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+      _success = false;
+      _errorMessage = "";
+    });
+
+    try {
+      var response = await http.post(Uri.parse("http://node.amoseraja.tech/api/login"),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: jsonEncode({
+          'name': _name.text,
+          'password': _password.text,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          EasyLoading.showSuccess('Great Success!');
+          Navigator.push(context, MaterialPageRoute(builder: (context) => bot()));
+          EasyLoading.dismiss();
+          _success = true;
+        });
+      } else {
+        setState(() {
+          _hasError = true;
+          _errorMessage = "Failed to login: ${response.body}";
+          EasyLoading.showError('Error in login');
+          EasyLoading.dismiss();
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _hasError = true;
+        _errorMessage = "An error occurred: $e";
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
-    _email.dispose();
+    _name.dispose();
     _password.dispose();
     super.dispose();
   }
@@ -41,60 +89,99 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 25),
         child: Column(
           children: [
-             Spacer(),
-             Text(
+            const Spacer(),
+            const Text(
               "Login",
               style: TextStyle(fontSize: 40, fontWeight: FontWeight.w500),
             ),
-             SizedBox(height: 50),
+            const SizedBox(height: 50),
             TextFormField(
-              controller: _email,
-              decoration: const InputDecoration(
-                labelText: "Email",
-                hintText: "Enter Email",
+              controller: _name,
+              decoration: InputDecoration(
+                labelText: "Name",
+                hintText: "Enter Name",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _password,
-              obscureText: true,
-              decoration:  InputDecoration(
+              obscureText: _obscurePassword,
+              decoration: InputDecoration(
                 labelText: "Password",
                 hintText: "Enter Password",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(5.0),
+                ),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
+                ),
               ),
             ),
-             SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _login,
-              child: Text("Login"),
+            const SizedBox(height: 30),
+            _isLoading
+                ? CircularProgressIndicator()
+                : ElevatedButton(
+              onPressed: () {
+                LoginUser();
+                EasyLoading.show();
+              },
+              child: const Text("Login"),
             ),
-            SizedBox( height: 5,),
-
-            ElevatedButton(onPressed: () async {
-              await _auth.loginWithGoogle();
-              final googleUser = await GoogleSignIn(clientId:"789013470799-h6c9u4clbubakbi3bl7idh2k67q2f6od.apps.googleusercontent.com" ).signIn();
-              context.read<NameProvider>().changeName(newName: googleUser!.displayName.toString());
-              Navigator.push(context, MaterialPageRoute(builder: (context)=> bot()));
-            }, child: Text("sign in Google")),
-            ElevatedButton(onPressed: (){
-              Navigator.push(context, MaterialPageRoute(builder: (context)=> const PhoneNumber()));
-            }
-                , child: Text("login by OTP")),
-
-            SizedBox(height: 5),
+            const SizedBox(height: 20),
+            if (_success) const Text("User logged in successfully!"),
+            if (_hasError)
+              Text(
+                _errorMessage,
+                style: const TextStyle(color: Colors.red),
+              ),
+            const SizedBox(height: 5),
+            ElevatedButton(
+              onPressed: () async {
+                await _auth.loginWithGoogle();
+                EasyLoading.show();
+                EasyLoading.showSuccess('Success!');
+                EasyLoading.dismiss();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => bot()),
+                );
+              },
+              child: const Text("Sign in with Google"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const PhoneNumber()),
+                );
+              },
+              child: const Text("Login by OTP"),
+            ),
+            const SizedBox(height: 5),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text("Don't have an account? "),
+                const Text("Don't have an account? "),
                 InkWell(
                   onTap: () => goToSignup(context),
-                  child: const Text("Signup", style: TextStyle(color: Colors.red),),
+                  child: const Text(
+                    "Signup",
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
               ],
             ),
-            Spacer(),
-
-
+            const Spacer(),
           ],
         ),
       ),
@@ -106,24 +193,5 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
       MaterialPageRoute(builder: (context) => const SignupScreen()),
     );
-  }
-
-  // void goToHome(BuildContext context) {
-  //   Navigator.push(
-  //     context,
-  //     MaterialPageRoute(builder: (context) => const HomeScreen()),
-  //   );
-  // }
-
-  Future<void> _login() async {
-   await _auth.loginUserWithEmailAndPassword(
-      _email.text,
-      _password.text,
-    );
-
-    // if (user != null) {
-    //   log("User Logged In");
-    //   goToHome(context);
-    // }
   }
 }

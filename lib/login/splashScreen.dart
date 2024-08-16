@@ -31,7 +31,7 @@ class _splash_screenState extends State<splash_screen> with SingleTickerProvider
     _controller.forward();
 
     // Navigate to home page after 6 seconds
-    Timer(Duration(seconds: 50), () {
+    Timer(Duration(seconds: 5), () {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => Wrapper()),
